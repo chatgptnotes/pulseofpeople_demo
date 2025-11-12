@@ -211,7 +211,7 @@ export default function PrimarySidebar({
           flex-direction: column;
           gap: 8px;
           width: 100%;
-          overflow-y: auto;
+          overflow-y: visible;
         }
 
         .bottom-section {
@@ -301,24 +301,6 @@ export default function PrimarySidebar({
         .category-button.with-tooltip:hover .button-tooltip {
           opacity: 1;
           visibility: visible;
-        }
-
-        /* Scrollbar styling */
-        .categories-section::-webkit-scrollbar {
-          width: 4px;
-        }
-
-        .categories-section::-webkit-scrollbar-track {
-          background: transparent;
-        }
-
-        .categories-section::-webkit-scrollbar-thumb {
-          background: #4B5563;
-          border-radius: 2px;
-        }
-
-        .categories-section::-webkit-scrollbar-thumb:hover {
-          background: #6B7280;
         }
       `}</style>
     </div>
