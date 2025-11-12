@@ -6,16 +6,13 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../../types/database';
 
-// Environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Environment variables with hardcoded fallback
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://eepwbydlfecosaqdysho.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVlcHdieWRsZmVjb3NhcWR5c2hvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI4NDA3ODQsImV4cCI6MjA3ODQxNjc4NH0.Z83AOOAFPGK-xKio6fYTXwAUJEHdIlsdCxPleDtE53c';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase environment variables. Please check your .env file.\n' +
-    'Required: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY'
-  );
-}
+console.log('[Supabase Service] Initializing client...');
+console.log('[Supabase Service] URL:', supabaseUrl);
+console.log('[Supabase Service] Key exists:', !!supabaseAnonKey);
 
 /**
  * Type-safe Supabase client instance
@@ -246,7 +243,7 @@ export async function callFunction<T>(
   functionName: string,
   params?: Record<string, any>
 ): Promise<T> {
-  const { data, error } = await supabase.rpc(functionName, params);
+  const { data, error } = await supabase.rpc(functionName as any, params as any);
   if (error) handleSupabaseError(error);
   return data as T;
 }

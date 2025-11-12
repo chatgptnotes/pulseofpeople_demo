@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Mail, ArrowLeft, AlertCircle, CheckCircle, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import Logo from '../components/Logo';
+import { fetchDemoCredentials, type DemoCredential } from '../services/demoCredentialsService';
 
 type AuthMode = 'login' | 'forgot-password' | 'magic-link';
 
@@ -16,36 +17,70 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showTestCreds, setShowTestCreds] = useState(false);
+  const [demoCredentials, setDemoCredentials] = useState<DemoCredential[]>([]);
+  const [loadingCreds, setLoadingCreds] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
   const { login, isLoading } = useAuth();
+
+  // Fetch demo credentials when component mounts
+  useEffect(() => {
+    async function loadDemoCredentials() {
+      setLoadingCreds(true);
+      try {
+        const creds = await fetchDemoCredentials();
+        setDemoCredentials(creds);
+      } catch (err) {
+        console.error('Failed to load demo credentials:', err);
+      } finally {
+        setLoadingCreds(false);
+      }
+    }
+
+    loadDemoCredentials();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
+    // Clear any old force login flags
+    localStorage.removeItem('force_login');
+    localStorage.removeItem('mock_user');
+
     try {
-      console.log('Login form submitted for:', credentials.email);
+      console.log('[Login] Attempting login for:', credentials.email);
 
       const success = await login(credentials.email, credentials.password);
 
       if (success) {
-        console.log('Login successful, navigating to dashboard...');
+        console.log('[Login] ✓ Authentication successful, navigating to dashboard...');
 
         // Store persistence preference
         if (rememberMe) {
           localStorage.setItem('auth_remember', 'true');
         }
 
-        navigate('/dashboard/legacy');
+        navigate('/dashboard');
       } else {
+        console.log('[Login] ✗ Authentication failed');
         setError('Invalid email or password. Please check your credentials.');
       }
     } catch (err: any) {
-      console.error('Auth error:', err);
-      setError(err.message || 'An error occurred during authentication');
+      console.error('[Login] Authentication error:', err);
+
+      // Display user-friendly error message
+      if (err.message.includes('Invalid login credentials')) {
+        setError('Invalid email or password. Please check your credentials and try again.');
+      } else if (err.message.includes('network') || err.message.includes('fetch')) {
+        setError('Unable to connect to authentication server. Please check your internet connection.');
+      } else if (err.message.includes('Email not confirmed')) {
+        setError('Please verify your email address before signing in.');
+      } else {
+        setError(err.message || 'An error occurred during sign in. Please try again.');
+      }
     }
   };
 
@@ -88,7 +123,7 @@ export default function Login() {
       const { error } = await supabase.auth.signInWithOtp({
         email: credentials.email,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard/legacy`,
+          emailRedirectTo: `${window.location.origin}/dashboard`,
         },
       });
 
@@ -373,7 +408,7 @@ export default function Login() {
             {mode === 'forgot-password' && renderForgotPasswordForm()}
             {mode === 'magic-link' && renderMagicLinkForm()}
 
-            {/* Test Credentials (only in login mode) */}
+            {/* Test Credentials (only in login mode) - Now Dynamic! */}
             {mode === 'login' && (
               <div className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/40 rounded-xl p-3 shadow-lg">
                 <button
@@ -383,7 +418,7 @@ export default function Login() {
                 >
                   <p className="text-blue-100 text-sm font-bold flex items-center gap-2">
                     <span className="inline-block w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
-                    Developer Test Credentials
+                    Demo Credentials
                   </p>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-blue-200 bg-blue-500/30 px-2 py-0.5 rounded-full">
@@ -397,137 +432,39 @@ export default function Login() {
 
                 {showTestCreds && (
                   <>
-                    {/* Scrollable Credentials Grid */}
-                    <div className="mt-3 max-h-64 overflow-y-auto pr-1">
-                      <div className="grid grid-cols-2 gap-2">
-                        {/* Superadmin */}
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2.5 py-2 border border-white/10">
-                          <span className="text-blue-200 text-xs font-medium">SUPERADMIN</span>
-                          <div className="space-y-1 mt-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <Mail className="w-3 h-3 text-blue-300 flex-shrink-0" />
-                              <span className="text-white font-mono text-[10px]">testadmin@tvk.com</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Lock className="w-3 h-3 text-blue-300 flex-shrink-0" />
-                              <span className="text-white font-mono text-[10px]">Admin@2024</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Admin */}
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2.5 py-2 border border-white/10">
-                          <span className="text-blue-200 text-xs font-medium">ADMIN</span>
-                          <div className="space-y-1 mt-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <Mail className="w-3 h-3 text-blue-300 flex-shrink-0" />
-                              <span className="text-white font-mono text-[10px]">admin1@tvk.com</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Lock className="w-3 h-3 text-blue-300 flex-shrink-0" />
-                              <span className="text-white font-mono text-[10px]">Admin@2024</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Manager */}
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2.5 py-2 border border-white/10">
-                          <span className="text-blue-200 text-xs font-medium">MANAGER</span>
-                          <div className="space-y-1 mt-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <Mail className="w-3 h-3 text-blue-300 flex-shrink-0" />
-                              <span className="text-white font-mono text-[10px]">manager@tvk.com</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Lock className="w-3 h-3 text-blue-300 flex-shrink-0" />
-                              <span className="text-white font-mono text-[10px]">Manager@2024</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Analyst */}
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2.5 py-2 border border-white/10">
-                          <span className="text-blue-200 text-xs font-medium">ANALYST</span>
-                          <div className="space-y-1 mt-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <Mail className="w-3 h-3 text-blue-300 flex-shrink-0" />
-                              <span className="text-white font-mono text-[10px]">analyst@tvk.com</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Lock className="w-3 h-3 text-blue-300 flex-shrink-0" />
-                              <span className="text-white font-mono text-[10px]">Analyst@2024</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* User */}
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2.5 py-2 border border-white/10">
-                          <span className="text-blue-200 text-xs font-medium">USER</span>
-                          <div className="space-y-1 mt-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <Mail className="w-3 h-3 text-blue-300 flex-shrink-0" />
-                              <span className="text-white font-mono text-[10px]">user@tvk.com</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Lock className="w-3 h-3 text-blue-300 flex-shrink-0" />
-                              <span className="text-white font-mono text-[10px]">User@2024</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Volunteer */}
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2.5 py-2 border border-white/10">
-                          <span className="text-blue-200 text-xs font-medium">VOLUNTEER</span>
-                          <div className="space-y-1 mt-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <Mail className="w-3 h-3 text-blue-300 flex-shrink-0" />
-                              <span className="text-white font-mono text-[10px]">volunteer1@tvk.com</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Lock className="w-3 h-3 text-blue-300 flex-shrink-0" />
-                              <span className="text-white font-mono text-[10px]">Volunteer@2024</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Viewer */}
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2.5 py-2 border border-white/10">
-                          <span className="text-blue-200 text-xs font-medium">VIEWER</span>
-                          <div className="space-y-1 mt-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <Mail className="w-3 h-3 text-blue-300 flex-shrink-0" />
-                              <span className="text-white font-mono text-[10px]">viewer@tvk.com</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Lock className="w-3 h-3 text-blue-300 flex-shrink-0" />
-                              <span className="text-white font-mono text-[10px]">Viewer@2024</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* VIP Demo Account */}
-                        <div className="bg-gradient-to-br from-amber-500/20 to-orange-500/20 backdrop-blur-sm rounded-lg px-2.5 py-2 border border-amber-400/40 col-span-2">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-amber-200 text-xs font-bold">VIP DEMO ACCOUNT</span>
-                            <span className="text-[9px] text-amber-200 bg-amber-500/30 px-1.5 py-0.5 rounded">Presentation</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 mt-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <Mail className="w-3 h-3 text-amber-300 flex-shrink-0" />
-                              <span className="text-white font-mono text-[10px]">vijay@tvk.com</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Lock className="w-3 h-3 text-amber-300 flex-shrink-0" />
-                              <span className="text-white font-mono text-[10px]">Vijay@2026</span>
-                            </div>
-                          </div>
-                        </div>
+                    {loadingCreds ? (
+                      <div className="mt-3 text-center">
+                        <div className="w-5 h-5 border-2 border-blue-200/30 border-t-blue-200 rounded-full animate-spin mx-auto"></div>
+                        <p className="text-blue-200 text-xs mt-2">Loading credentials...</p>
                       </div>
-                    </div>
+                    ) : (
+                      <>
+                        {/* Dynamic Credentials Grid */}
+                        <div className="mt-3 max-h-64 overflow-y-auto pr-1">
+                          <div className="grid grid-cols-2 gap-2">
+                            {demoCredentials.map((cred) => (
+                              <div key={cred.email} className="bg-white/10 backdrop-blur-sm rounded-lg px-2.5 py-2 border border-white/10">
+                                <span className="text-blue-200 text-xs font-medium">{cred.role.toUpperCase()}</span>
+                                <div className="space-y-1 mt-1.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <Mail className="w-3 h-3 text-blue-300 flex-shrink-0" />
+                                    <span className="text-white font-mono text-[10px]">{cred.email}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <Lock className="w-3 h-3 text-blue-300 flex-shrink-0" />
+                                    <span className="text-white font-mono text-[10px]">{cred.password}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
 
-                    <p className="text-blue-200/70 text-xs mt-3 text-center italic">
-                      Total: 507 users synced
-                    </p>
+                        <p className="text-blue-200/70 text-xs mt-3 text-center italic">
+                          All passwords: "password" • 26 users created
+                        </p>
+                      </>
+                    )}
                   </>
                 )}
               </div>

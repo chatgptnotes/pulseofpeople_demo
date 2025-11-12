@@ -30,3 +30,5 @@ yarn-error.log*
 # Vercel
 .vercel
 node_modules
+*.backup
+*.dump

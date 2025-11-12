@@ -53,14 +53,14 @@ export function TenantProvider({ children, fallback, errorFallback }: TenantProv
 
       // Check if multi-tenant mode is enabled
       if (!isMultiTenantMode()) {
-        // Single-tenant mode - use environment variables
+        // Single-tenant mode - use environment variables with hardcoded fallback
         const config: TenantConfig = {
           id: 'default',
           slug: 'default',
           name: 'Default Tenant',
           displayName: 'Pulse of People',
-          supabaseUrl: import.meta.env.VITE_SUPABASE_URL || '',
-          supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+          supabaseUrl: import.meta.env.VITE_SUPABASE_URL || 'https://eepwbydlfecosaqdysho.supabase.co',
+          supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVlcHdieWRsZmVjb3NhcWR5c2hvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI4NDA3ODQsImV4cCI6MjA3ODQxNjc4NH0.Z83AOOAFPGK-xKio6fYTXwAUJEHdIlsdCxPleDtE53c',
           supabaseRegion: 'ap-south-1',
           contactName: '',
           contactEmail: '',

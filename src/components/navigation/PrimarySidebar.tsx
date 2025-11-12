@@ -193,7 +193,7 @@ export default function PrimarySidebar({
           left: 0;
           top: 0;
           z-index: 40;
-          overflow: hidden;
+          overflow: visible;
         }
 
         .logo-section {

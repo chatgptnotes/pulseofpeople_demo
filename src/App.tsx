@@ -140,9 +140,7 @@ function AppRoutes() {
 
               <Route path="/dashboard/admin" element={
                 <ProtectedRoute requiredRole="admin">
-                  <Layout>
-                    <AdminStateDashboard />
-                  </Layout>
+                  <AdminStateDashboard />
                 </ProtectedRoute>
               } />
 

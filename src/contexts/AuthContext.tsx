@@ -79,6 +79,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     console.log('[AuthContext] 🔄 Checking Supabase session...');
 
     try {
+      // Clean up any old force login flags
+      localStorage.removeItem('force_login');
+      localStorage.removeItem('mock_user');
+
       // Check for existing Supabase session (no timeout for auth check)
       console.log('[AuthContext] 🔄 Step 1/2: Fetching auth session...');
       const { data: { session }, error } = await supabase.auth.getSession();
@@ -137,15 +141,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return;
         }
 
-        console.log('[AuthContext] ✅ User data loaded from database:', userData.full_name, userData.role);
+        // Construct full name from first_name and last_name
+        const fullName = [userData.first_name, userData.last_name]
+          .filter(Boolean)
+          .join(' ') || userData.username || 'User';
+
+        console.log('[AuthContext] ✅ User data loaded from database:', fullName, userData.role);
 
         setUser({
           id: userData.id,
-          name: userData.full_name,
+          name: fullName,
           email: userData.email,
           role: userData.role as UserRole,
           permissions: userData.permissions || [],
-          avatar: userData.avatar_url,
+          avatar: userData.avatar,
           is_super_admin: userData.is_super_admin,
           organization_id: userData.organization_id,
           status: userData.status || 'active',
@@ -223,15 +232,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return;
         }
 
-        console.log('[AuthContext] ✅ User data loaded from database:', userData.full_name, userData.role);
+        // Construct full name from first_name and last_name
+        const fullName = [userData.first_name, userData.last_name]
+          .filter(Boolean)
+          .join(' ') || userData.username || 'User';
+
+        console.log('[AuthContext] ✅ User data loaded from database:', fullName, userData.role);
 
         setUser({
           id: userData.id,
-          name: userData.full_name,
+          name: fullName,
           email: userData.email,
           role: userData.role as UserRole,
           permissions: userData.permissions || [],
-          avatar: userData.avatar_url,
+          avatar: userData.avatar,
           is_super_admin: userData.is_super_admin,
           organization_id: userData.organization_id,
           status: userData.status || 'active',
@@ -280,6 +294,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (authError) {
         console.error('[AuthContext] ❌ Login failed:', authError.message);
+
+        // Check if it's a network error
+        if (authError.message.includes('fetch') || authError.message.includes('network')) {
+          console.warn('[AuthContext] ⚠️ Network error detected - checking for demo mode...');
+          throw new Error('Unable to connect to authentication server. Please check your internet connection.');
+        }
+
         throw new Error(authError.message);
       }
 
